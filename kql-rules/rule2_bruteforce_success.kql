@@ -1,0 +1,21 @@
+// Rule 2: Brute Force Success Correlation
+// MITRE ATT&CK: Credential Access (T1110) / Initial Access: Valid Accounts (T1078)
+// Severity: High
+// Schedule: Every 5 minutes looking across 1 hour
+
+// Step 1: Find all external IPs with 3 or more failed logons in the last 1 hour
+let FailedLogons = SecurityEvent
+    | where TimeGenerated >= ago(1h)
+    | where EventID == 4625
+    | where isnotempty(IpAddress) and IpAddress !in ("-", "127.0.0.1", "::1")
+    | summarize FailedCount = count(), FirstFail = min(TimeGenerated), LastFail = max(TimeGenerated) by Computer, Account, IpAddress
+    | where FailedCount >= 3;
+// Step 2: Correlate with any successful logons from that same IP in that window
+SecurityEvent
+| where TimeGenerated >= ago(1h)
+| where EventID == 4624
+| where isnotempty(IpAddress) and IpAddress !in ("-", "127.0.0.1", "::1")
+| project SuccessTime = TimeGenerated, Computer, CompromisedAccount = Account, IpAddress, LogonType
+| join kind=inner (FailedLogons) on Computer, IpAddress
+| where SuccessTime >= LastFail
+| extend HostName = tostring(split(Computer, ".")[0])

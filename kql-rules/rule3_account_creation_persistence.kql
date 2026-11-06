@@ -1,0 +1,10 @@
+// Rule 3: Suspicious Local Account Created & Added to Administrators
+// MITRE ATT&CK: Persistence: Create Account - Local Account (T1136.001) / Privilege Escalation: Account Manipulation (T1098)
+// Severity: High
+// Schedule: Every 5 minutes looking across 1 hour
+
+SecurityEvent
+| where TimeGenerated >= ago(1h)
+| where EventID in (4720, 4732)
+| project TimeGenerated, Computer, EventID, Activity, TargetAccount = TargetUserName, SubjectAccount = SubjectUserName, MemberName
+| extend HostName = tostring(split(Computer, ".")[0])

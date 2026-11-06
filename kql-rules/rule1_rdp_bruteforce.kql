@@ -1,0 +1,20 @@
+// Rule 1: Potential RDP / External Password Brute Force
+// MITRE ATT&CK: Credential Access - Brute Force: Password Guessing (T1110.001)
+// Severity: Medium
+// Schedule: Every 5 minutes looking across 1 hour
+
+SecurityEvent
+| where TimeGenerated >= ago(1h)
+| where EventID == 4625
+// Filter out local machine/system noise, loopback, and empty source IPs
+| where isnotempty(IpAddress) and IpAddress !in ("-", "127.0.0.1", "::1")
+// Aggregate failure count per targeted host, targeted account, and attacker IP
+| summarize 
+    FailedCount = count(),
+    StartTime = min(TimeGenerated),
+    EndTime = max(TimeGenerated)
+    by Computer, Account, IpAddress
+// Threshold: Alert on 3 or more failed attempts within the 1-hour evaluation window
+| where FailedCount >= 3
+// Extract clean HostName for Sentinel Entity Mapping
+| extend HostName = tostring(split(Computer, ".")[0])

@@ -1,0 +1,18 @@
+// Rule 6: Entra ID Cloud Identity - Impossible Travel Sign-in
+// MITRE ATT&CK: Initial Access (TA0001) / Credential Access (TA0006) - Valid Accounts: Cloud Accounts (T1078.004)
+// Severity: Medium
+// Schedule: Every 15 minutes looking across 2 hours
+
+SigninLogs
+| where TimeGenerated >= ago(2h)
+| where ResultType == 0 // Successful logons only
+| project TimeGenerated, UserPrincipalName, IPAddress, Location = tostring(LocationDetails.countryOrRegion)
+| summarize 
+    LoginCount = count(), 
+    DistinctCountries = dcount(Location), 
+    Countries = make_set(Location), 
+    IPs = make_set(IPAddress),
+    FirstSeen = min(TimeGenerated),
+    LastSeen = max(TimeGenerated)
+    by UserPrincipalName
+| where DistinctCountries > 1

@@ -1,0 +1,11 @@
+// Rule 4: Suspicious PowerShell Execution - Obfuscated or Encoded Command
+// MITRE ATT&CK: Execution (TA0002) / Defense Evasion (TA0005) - Command & Scripting: PowerShell (T1059.001)
+// Severity: Medium
+// Schedule: Every 5 minutes looking across 1 hour
+
+SecurityEvent
+| where TimeGenerated >= ago(1h)
+| where EventID in (4688, 4104) or EventID == 4624
+| where CommandLine has_any ("-enc", "-encodedcommand", "-noni", "-w hidden", "downloadstring", "invoke-expression", "iex", "bypass")
+| project TimeGenerated, Computer, Account, CommandLine, Activity
+| extend HostName = tostring(split(Computer, ".")[0])

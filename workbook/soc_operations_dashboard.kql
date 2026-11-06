@@ -1,0 +1,30 @@
+// SOC Operations - Threat Telemetry & Attack Surface Dashboard Queries
+
+// Widget 1: Failed Logons Over Time (Time Chart / Line Chart)
+// Visualization: Time chart
+SecurityEvent
+| where TimeGenerated >= ago(7d)
+| where EventID == 4625
+| summarize FailedLogons = count() by bin(TimeGenerated, 1h)
+| render timechart
+
+// -------------------------------------------------------------
+
+// Widget 2: Top Targeted Accounts (Bar Chart)
+// Visualization: Bar chart
+SecurityEvent
+| where TimeGenerated >= ago(7d)
+| where EventID == 4625
+| summarize Attempts = count() by Account
+| top 5 by Attempts desc
+
+// -------------------------------------------------------------
+
+// Widget 3: Attacker Geographic Map (World Map)
+// Visualization: Map (Location info using: Latitude/Longitude)
+SecurityEvent
+| where EventID == 4625
+| where isnotempty(IpAddress) and IpAddress !in ("-", "127.0.0.1", "::1")
+| extend Geo = geo_info_from_ip_address(IpAddress)
+| extend Latitude = toreal(Geo.latitude), Longitude = toreal(Geo.longitude), Country = tostring(Geo.country)
+| summarize AttackCount = count() by IpAddress, Latitude, Longitude, Country
